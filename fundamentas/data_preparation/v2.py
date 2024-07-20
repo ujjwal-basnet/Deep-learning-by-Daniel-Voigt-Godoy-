@@ -5,10 +5,9 @@ from torch.utils.data import TensorDataset , DataLoader , random_split
 torch.manual_seed(42)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-x = np.linspace(1 , 10 , 100)
-y  = 2*x  + 10 
-x_tensor = torch.as_tensor(x).float()
-y_tensor = torch.as_tensor(y).float()
+
+x_tensor = torch.as_tensor(X).float().view(-1, 1)
+y_tensor = torch.as_tensor(y).float().view(-1 , 1)
 
 #build 
 dataset = TensorDataset(x_tensor , y_tensor)
