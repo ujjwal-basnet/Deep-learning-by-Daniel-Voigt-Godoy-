@@ -44,7 +44,7 @@ class StepByStep(object):
             self.device = device 
             self.model.to(device)
         except RuntimeError:
-            self.device = ('cuda' if torch.cuda.is_avaiable() else 'cpu')
+            self.device = ('cuda' if torch.cuda.is_available() else 'cpu')
             print(f"Couldn't send it to {device} \n sending it to {self.device} instead.")
             self.model.to(self.device)
 
@@ -62,7 +62,7 @@ class StepByStep(object):
 
         def perform_train_step_fn(x , y):
             #set model to train 
-            model.train()
+            self.model.train()
             yhat = self.model(x)
 
             loss = self.loss_fn(yhat , y)
@@ -75,7 +75,7 @@ class StepByStep(object):
     def _make_val_step_fn(self):
         def perform_val_step_fn(x , y):
             #model eval 
-            model.eval()
+            self.model.eval()
             yhat = self.model(x)
             loss = self.loss_fn(yhat , y)
 
@@ -116,7 +116,7 @@ class StepByStep(object):
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def train(self , n_epcohs:int , seed= 42)-> None :
+    def train(self , n_epcohs:int , seed= 42) :
         #this function does't return anything  , it uppdates several class attributes self.losses  , self.val_losses and self.total_epoch
         self.set_seed(seed)
         
@@ -211,7 +211,7 @@ class StepByStep(object):
         return fig
 ############################# add graph ###########################
 def add_graph(self):
-    if self.train_loader and self.write:
+    if self.train_loader and self.writer:
         #fetch single mini batch 
         x_dummy , y_dummy = next(iter(self.train_loader))
         self.writer.add_graph(self.model , x_dummy.to(self.device))
