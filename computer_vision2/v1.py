@@ -1,6 +1,7 @@
 import numpy as np
 import datetime
 import torch
+import random
 import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 
@@ -134,7 +135,12 @@ class StepByStep(object):
         torch.backends.cudnn.benchmark = False    
         torch.manual_seed(seed)
         np.random.seed(seed)
-    
+        random.seed(seed)
+        try:
+            self.train_loader.sampler.generator.manual_seed(seed)
+        except AttributeError:
+            pass
+
     def train(self, n_epochs, seed=42):
         # To ensure reproducibility of the training process
         self.set_seed(seed)
@@ -222,3 +228,6 @@ class StepByStep(object):
         if self.train_loader and self.writer:
             x_sample, y_sample = next(iter(self.train_loader))
             self.writer.add_graph(self.model, x_sample.to(self.device))
+
+    def count_parameters(self):
+        return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
