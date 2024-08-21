@@ -24,7 +24,7 @@ def gen_img(start, target, fill=1, img_size=10):
         if target == 1:
             if start_row is not None:
                 up = (range(start_row, -1, -1), 
-                      range(0, start_row + 1))
+                      range(0, start_row + 1))0
             else:
                 up = (range(img_size - 1, start_col - 1, -1), 
                       range(start_col, img_size))
