@@ -88,6 +88,9 @@ class StepByStep(object):
         # Returns the function that will be called inside the train loop
         return perform_train_step_fn
     
+   
+
+    
     def _make_val_step_fn(self):
         # Builds function that performs a step in the validation loop
         def perform_val_step_fn(x, y):
@@ -200,6 +203,47 @@ class StepByStep(object):
 
         self.model.train() # always use TRAIN for resuming training   
 
+
+    
+    def _visualize_tensors(axs, x, y=None, yhat=None, layer_name='', title=None):
+        # The number of images is the number of subplots in a row
+        n_images = len(axs)
+        
+        # Gets max and min values for scaling the grayscale
+        minv, maxv = np.min(x[:n_images]), np.max(x[:n_images])
+        
+        # For each image
+        for j, image in enumerate(x[:n_images]):
+            ax = axs[j]
+            
+            # Sets title, labels, and removes ticks
+            if title is not None:
+                ax.set_title(f'{title} #{j}', fontsize=12)
+                
+            shp = np.atleast_2d(image).shape
+            ax.set_ylabel(
+                f'{layer_name}\n{shp[0]}x{shp[1]}',
+                rotation=0, labelpad=40
+            )
+            
+            xlabel1 = '' if y is None else f'\nLabel: {y[j]}'
+            xlabel2 = '' if yhat is None else f'\nPredicted: {yhat[j]}'
+            xlabel = f'{xlabel1}{xlabel2}'
+            
+            if len(xlabel):
+                ax.set_xlabel(xlabel, fontsize=12)
+            
+            ax.set_xticks([])
+            ax.set_yticks([])
+            
+            # Plots image as a grayscale image
+            ax.imshow(
+                np.atleast_2d(image.squeeze()),
+                cmap='gray',
+                vmin=minv,
+                vmax=maxv)
+            return 
+
     def predict(self, x):
         # Set is to evaluation mode for predictions
         self.model.eval() 
@@ -231,3 +275,5 @@ class StepByStep(object):
 
     def count_parameters(self):
         return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+    
+    
