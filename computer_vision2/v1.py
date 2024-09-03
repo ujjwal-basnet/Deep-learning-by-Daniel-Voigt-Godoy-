@@ -31,6 +31,8 @@ class StepByStep(object):
         self.val_losses = []
         self.total_epochs = 0
 
+    
+
         # Creates the train_step function for our model, 
         # loss function and optimizer
         # Note: there are NO ARGS there! It makes use of the class
@@ -245,16 +247,18 @@ class StepByStep(object):
             return 
 
     def predict(self, x):
-        # Set is to evaluation mode for predictions
+        # Set it to evaluation mode for predictions
         self.model.eval() 
-        # Takes aNumpy input and make it a float tensor
+        # Takes a Numpy input and make it a float tensor
         x_tensor = torch.as_tensor(x).float()
         # Send input to device and uses model for prediction
+        
         y_hat_tensor = self.model(x_tensor.to(self.device))
         # Set it back to train mode
         self.model.train()
         # Detaches it, brings it to CPU and back to Numpy
         return y_hat_tensor.detach().cpu().numpy()
+
 
     def plot_losses(self):
         fig = plt.figure(figsize=(10, 4))
@@ -276,4 +280,139 @@ class StepByStep(object):
     def count_parameters(self):
         return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
     
+    # def attach_hooks(self, layers_to_hook, hook_fn=None):
+    #     #clear any previous values
+    #     self.visualization= {}
+
+    #     #create the dictionary to map layer to their names
+    #     modules= list(self.model.named_modules())
+    #     layers_names= {layer: name for name, layer in modules}
+
     
+    #     if hook_fn is None :
+    #         # hook the function to be attached to the forward pass 
+    #         def hook_fn(layer, input, outputs):
+    #             name= layers_names[layer]
+    #             #deteaches outputs
+    #             values= outputs.detach().cpu().numpy()
+
+    #             #since the hook fucntion may be called multiple times
+    #             # for example , larger datasets is broken into multiple mini batches
+    #             # each mini batches call hook function and 
+    #             # thus for we need to contatinates the result of hook function inthese case
+
+    #             if name not in self.visualization :
+    #                 self.visualization[name]= values
+
+    #             else :
+    #                 self.visualization[name]= np.concatenate([self.visualization[name],values])
+        
+    #     #register hook 
+
+    #     for name,layer in modules:
+    #         #if the layer is in our list
+    #         if name in layers_to_hook:
+                
+    #             #register the forward hook and keep the handle in another dict
+    #             self.handles[name]= layer.register_forward_hook(hook_fn)
+
+    # def remove_hooks(self):
+    #     #loops through all the hooks and remove
+    #     for handle in self.handles.values():
+    #         handle.remove()
+    #     self.handles= {} # clear all the dicts , as all hook  has been removed
+    #     self.visualization= {}
+
+    
+    def attach_hooks(self, layers_to_hook, hook_fn=None):
+        # Clear any previous values
+        self.visualization = {}
+        self.handles = {}
+        # Creates the dictionary to map layer objects to their names
+        modules = list(self.model.named_modules())
+        layer_names = {layer: name for name, layer in modules[1:]}
+        
+        if hook_fn is None:
+            # Hook function to be attached to the forward pass
+            def hook_fn(layer, inputs, outputs):
+                # Gets the layer name
+                name = layer_names[layer]
+                # Detaches outputs
+                values = outputs.detach().cpu().numpy()
+                # Since the hook function may be called multiple times
+                # for example, if we make predictions for multiple mini-batches
+                # it concatenates the results
+                if self.visualization[name] is None:
+                    self.visualization[name] = values
+                else:
+                    self.visualization[name] = np.concatenate([self.visualization[name], values])
+
+        for name, layer in modules:
+            # If the layer is in our list
+            if name in layers_to_hook:
+                # Initializes the corresponding key in the dictionary
+                self.visualization[name] = None
+                # Register the forward hook and keep the handle in another dict
+                self.handles[name] = layer.register_forward_hook(hook_fn)
+
+    def remove_hooks(self):
+        # Loops through all hooks and removes them
+        for handle in self.handles.values():
+            handle.remove()
+        # Clear the dict, as all hooks have been removed
+        self.handles = {}
+
+
+    def visualize_outputs(self, layers, n_images=10, y=None, yhat=None):
+        layers = filter(lambda l: l in self.visualization.keys(), layers)
+        layers = list(layers)
+        shapes = [self.visualization[layer].shape for layer in layers]
+        n_rows = [shape[1] if len(shape) == 4 else 1 
+                for shape in shapes]
+        total_rows = np.sum(n_rows)
+
+        fig, axes = plt.subplots(total_rows, n_images, 
+                                figsize=(1.5*n_images, 1.5*total_rows))
+        axes = np.atleast_2d(axes).reshape(total_rows, n_images)
+        
+        # Loops through the layers, one layer per row of subplots
+        row = 0
+        for i, layer in enumerate(layers):
+            start_row = row
+            # Takes the produced feature maps for that layer
+            output = self.visualization[layer]
+                
+            is_vector = len(output.shape) == 2
+            
+            for j in range(n_rows[i]):
+                StepByStep._visualize_tensors(
+                    axes[row, :],
+                    output if is_vector else output[:, j].squeeze(),
+                    y, 
+                    yhat, 
+                    layer_name=layers[i] \
+                            if is_vector \
+                            else f'{layers[i]}\nfil#{row-start_row}',
+                    title='Image' if (row == 0) else None
+                )
+                row += 1
+                
+        for ax in axes.flat:
+            ax.label_outer()
+
+        plt.tight_layout()
+        return fig
+
+
+            
+        
+
+
+        
+        
+
+        
+        
+
+            
+
